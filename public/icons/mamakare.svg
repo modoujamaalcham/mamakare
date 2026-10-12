@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title>Mamakare</title>
+  <rect width="512" height="512" rx="128" fill="#087f7b"/>
+  <circle cx="256" cy="256" r="158" fill="#e8fbf8" opacity=".16"/>
+  <path d="M256 383c-12-17-112-98-112-182 0-49 35-84 80-84 18 0 35 7 48 21 13-14 30-21 48-21 45 0 80 35 80 84 0 84-100 165-112 182z" fill="#f8fffe"/>
+  <path d="M256 151v154M179 228h154" stroke="#087f7b" stroke-width="24" stroke-linecap="round"/>
+  <path d="M157 318c27 22 61 36 99 36s72-14 99-36" fill="none" stroke="#087f7b" stroke-width="13" stroke-linecap="round" opacity=".75"/>
+</svg>
