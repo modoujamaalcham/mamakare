@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Section, Empty, Loading, Pill } from "@/components/ui-kit";
+import { Section, Empty, Loading, Pill, MetricCard } from "@/components/ui-kit";
 
 export const Route = createFileRoute("/_authenticated/staff")({
   ssr: false,
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/staff")({
       .maybeSingle();
     if (!admin) throw redirect({ to: "/dashboard" });
   },
-  head: () => ({ meta: [{ title: "Staff administration — Mamakare" }] }),
+  head: () => ({ meta: [{ title: "Staff & access — Mamakare" }] }),
   component: StaffAdministration,
 });
 
@@ -118,23 +118,45 @@ function StaffAdministration() {
 
   return (
     <div className="w-full space-y-6 pb-8">
-      <div className="relative overflow-hidden rounded-3xl bg-primary p-6 text-primary-foreground shadow-lg shadow-primary/10 md:p-8">
+      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary via-primary/95 to-primary/85 p-6 text-primary-foreground shadow-lg shadow-primary/10 md:p-8">
         <div className="relative z-10 flex items-end justify-between gap-5">
           <div>
-            <p className="mb-2 text-sm font-medium text-primary-foreground/70">Workspace access</p>
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Staff administration</h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-primary-foreground/75">
-              Create confirmed staff accounts and keep access limited to the role each person needs.
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary-foreground/80">
+              Healthcare Team Access
+            </p>
+            <h1 className="text-3xl font-bold tracking-tight md:text-4xl font-display">
+              Staff & Access
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-primary-foreground/85">
+              Manage verified clinical staff accounts, permissions, and credential access controls.
             </p>
           </div>
           <UsersRound className="hidden h-16 w-16 text-white/15 sm:block" strokeWidth={1} />
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <MiniStat label="Accepted" value={accepted} icon={CheckCircle2} />
-        <MiniStat label="Pending" value={pending} icon={Clock3} />
-        <MiniStat label="Expired" value={expired} icon={MailPlus} />
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+        <MetricCard
+          label="Accepted"
+          value={accepted}
+          icon={CheckCircle2}
+          tone="success"
+          hint="Active staff"
+        />
+        <MetricCard
+          label="Pending"
+          value={pending}
+          icon={Clock3}
+          tone="warning"
+          hint="Awaiting setup"
+        />
+        <MetricCard
+          label="Expired"
+          value={expired}
+          icon={MailPlus}
+          tone="neutral"
+          hint="Past 7 days"
+        />
       </div>
 
       <Section title="Staff accounts" action={<UsersRound className="h-4 w-4 text-primary" />}>

@@ -12,14 +12,16 @@ import {
   FileText,
   HeartPulse,
   MapPin,
+  Baby,
   Pencil,
   Phone,
   Share2,
   ShieldAlert,
   Trash2,
   UserRound,
+  Stethoscope,
 } from "lucide-react";
-import { Section, Pill, Empty, Loading, riskTone } from "@/components/ui-kit";
+import { Section, Pill, Empty, Loading, riskTone, GestationalTracker, MetricCard } from "@/components/ui-kit";
 import { ReportPreview } from "@/components/report-preview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +37,7 @@ import type {
   Referral,
 } from "@/lib/db";
 import { useCompanySettings, usePatient } from "@/lib/db";
-import { formatDate, formatDateTime, formatGA, gestationalAge } from "@/lib/clinical";
+import { age, formatDate, formatDateTime, formatGA, gestationalAge } from "@/lib/clinical";
 import type { ReportInput } from "@/lib/reports";
 import { shareReportImage } from "@/lib/reports";
 import {
@@ -71,6 +73,9 @@ function PatientDetail() {
   const queryClient = useQueryClient();
   const [activeReport, setActiveReport] = useState<ReportInput | null>(null);
   const [editingRecord, setEditingRecord] = useState<EditableRecord | null>(null);
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "encounters" | "appointments" | "investigations" | "prescriptions" | "info"
+  >("overview");
 
   if (isLoading) return <Loading />;
   if (error || !data) return <Empty>Could not load this patient record.</Empty>;
@@ -334,370 +339,742 @@ function PatientDetail() {
   }
 
   return (
-    <div className="w-full space-y-5 pb-8">
-      <Link
-        to="/patients"
-        className="inline-flex items-center gap-2 rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to patients
-      </Link>
+    <div className="w-full space-y-6 pb-8">
+      {/* Top Navigation & Export Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          to="/patients"
+          className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-card/60 px-3.5 py-2 text-xs font-semibold text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-95"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to patients
+        </Link>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-2 rounded-xl text-xs font-semibold border-border/70"
+            onClick={generatePatientReport}
+          >
+            <Download className="h-3.5 w-3.5 text-primary" />
+            <span className="hidden sm:inline">Clinical PDF</span> Report
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-2 rounded-xl text-xs font-semibold border-border/70"
+            onClick={() => void shareImage(patientReport())}
+          >
+            <Share2 className="h-3.5 w-3.5 text-emerald-600" /> WhatsApp
+          </Button>
+        </div>
+      </div>
 
-      <div className="relative overflow-hidden rounded-3xl bg-primary p-6 text-primary-foreground shadow-lg shadow-primary/10 md:p-8">
-        <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white/15 text-xl font-bold">
-              {patient.first_name[0]}
-              {patient.last_name[0]}
+      {/* Patient Hero Banner */}
+      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary via-primary/95 to-primary/85 p-6 text-primary-foreground shadow-lg shadow-primary/10 md:p-8">
+        <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start sm:items-center gap-4">
+            <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white/20 text-xl font-bold backdrop-blur-md ring-4 ring-white/10">
+              {patient.first_name?.[0] ?? ""}
+              {patient.last_name?.[0] ?? ""}
             </div>
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="text-2xl font-bold tracking-tight md:text-3xl font-display">
                   {patient.first_name} {patient.last_name}
                 </h1>
                 <Pill
                   tone={patient.status === "active" ? "success" : "neutral"}
-                  className="bg-white/15 text-primary-foreground"
+                  className="bg-white/20 text-white border-white/25"
                 >
                   {patient.status}
                 </Pill>
               </div>
-              <p className="mt-1 text-sm text-primary-foreground/75">
-                Patient ID · {patient.patient_number}
-              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-primary-foreground/85">
+                <span className="font-mono bg-white/15 px-2 py-0.5 rounded-md">
+                  ID: {patient.patient_number}
+                </span>
+                {patient.date_of_birth && (
+                  <span>
+                    {formatDate(patient.date_of_birth)} ({age(patient.date_of_birth)} yrs)
+                  </span>
+                )}
+                {patient.village_town && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {patient.village_town}
+                    {patient.region ? `, ${patient.region}` : ""}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {patient.phone ? (
+
+          {patient.phone ? (
+            <div className="flex items-center gap-2">
               <a
                 href={`tel:${patient.phone}`}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white/15 px-4 text-sm font-semibold transition-colors hover:bg-white/25"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-primary shadow-sm transition-all hover:bg-white/95 active:scale-95"
               >
-                <Phone className="h-4 w-4" /> Call patient
+                <Phone className="h-4 w-4" /> Call {patient.phone}
               </a>
-            ) : null}
-            <Button
-              type="button"
-              variant="secondary"
-              className="h-11 rounded-xl bg-white text-primary hover:bg-white/90"
-              onClick={generatePatientReport}
-            >
-              <Download className="h-4 w-4" /> PDF report
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="h-11 rounded-xl bg-white/15 text-primary-foreground hover:bg-white/25"
-              onClick={() => void shareImage(patientReport())}
-            >
-              <Share2 className="h-4 w-4" /> WhatsApp
-            </Button>
-          </div>
+            </div>
+          ) : null}
         </div>
         <HeartPulse
-          className="absolute -bottom-10 -right-2 h-48 w-48 text-white/10"
+          className="pointer-events-none absolute -bottom-10 -right-4 h-48 w-48 text-white/10"
           strokeWidth={1}
         />
       </div>
 
+      {/* Maternal Gestational Progress Bar (if active pregnancy) */}
+      {activePregnancy && (
+        <GestationalTracker
+          ga={ga}
+          riskLevel={activePregnancy.risk_level}
+          edd={activePregnancy.edd ? formatDate(activePregnancy.edd) : undefined}
+        />
+      )}
+
+      {/* Quick Care Actions Toolbar */}
       <CareActions patientId={patient.id} pregnancyId={activePregnancy?.id} />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MiniStat label="Encounters" value={encounters.length} icon={ClipboardList} />
-        <MiniStat label="Appointments" value={appointments.length} icon={CalendarDays} />
-        <MiniStat label="Investigations" value={investigations.length} icon={Activity} />
-        <MiniStat label="Pregnancies" value={pregnancies.length} icon={HeartPulse} />
+      {/* Segmented Clinical Tabs Switcher */}
+      <div className="border-b border-border/70">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none">
+          {[
+            { id: "overview", label: "Overview", count: null },
+            { id: "encounters", label: "Encounters & Vitals", count: encounters.length },
+            { id: "appointments", label: "Appointments", count: appointments.length },
+            { id: "investigations", label: "Investigations", count: investigations.length },
+            {
+              id: "prescriptions",
+              label: "Prescriptions & Referrals",
+              count: prescriptions.length + referrals.length,
+            },
+            { id: "info", label: "Patient Profile", count: null },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-xs font-semibold transition-all ${
+                activeTab === tab.id
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "border border-transparent bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              <span>{tab.label}</span>
+              {tab.count !== null && (
+                <span
+                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                    activeTab === tab.id
+                      ? "bg-white/20 text-white"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-5">
-          <Section
-            title="Recent encounters"
-            action={
-              <Link to="/schedule" className="text-sm font-medium text-primary">
-                View schedule
-              </Link>
-            }
-            className="overflow-hidden"
-          >
-            {encounters.length === 0 ? (
-              <Empty>No encounters recorded.</Empty>
-            ) : (
-              <ul className="divide-y divide-border/70">
-                {encounters.slice(0, 10).map((encounter) => (
-                  <li key={encounter.id} className="flex items-center gap-3 py-4">
-                    <span
-                      className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${encounter.danger_flags.length > 0 ? "bg-destructive-soft text-destructive" : "bg-primary-soft text-primary"}`}
-                    >
-                      {encounter.danger_flags.length > 0 ? (
-                        <ShieldAlert className="h-4 w-4" />
-                      ) : (
-                        <ClipboardList className="h-4 w-4" />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-semibold capitalize">{encounter.visit_type}</span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">
-                        {formatDateTime(encounter.visit_date)}
-                      </span>
-                    </span>
-                    {encounter.danger_flags.length > 0 && (
-                      <Pill tone="urgent">Needs attention</Pill>
-                    )}
-                    <RecordActions
-                      label="clinical encounter"
-                      onEdit={() => setEditingRecord({ kind: "encounter", record: encounter })}
-                      onDelete={() => void deleteRecord("encounter", encounter.id)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Section>
-
-          <div className="grid gap-5 md:grid-cols-2">
-            <Section title="Investigations" action={<FileText className="h-4 w-4 text-primary" />}>
-              {investigations.length === 0 ? (
-                <Empty>No investigations recorded.</Empty>
-              ) : (
-                <ul className="divide-y divide-border/70">
-                  {investigations.slice(0, 8).map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex items-center justify-between gap-3 py-3 text-sm"
-                    >
-                      <span className="min-w-0 truncate font-medium">{item.name}</span>
-                      <Pill
-                        tone={
-                          item.abnormal
-                            ? "urgent"
-                            : item.status === "completed"
-                              ? "success"
-                              : "warning"
-                        }
-                      >
-                        {item.status}
-                      </Pill>
-                      <RecordActions
-                        label="investigation"
-                        onEdit={() => setEditingRecord({ kind: "investigation", record: item })}
-                        onDelete={() => void deleteRecord("investigation", item.id)}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Section>
-            <Section
-              title="Appointments"
-              action={<CalendarDays className="h-4 w-4 text-primary" />}
-            >
-              {appointments.length === 0 ? (
-                <Empty>No appointments recorded.</Empty>
-              ) : (
-                <ul className="divide-y divide-border/70">
-                  {appointments.slice(0, 8).map((appointment) => (
-                    <li
-                      key={appointment.id}
-                      className="flex items-center justify-between gap-3 py-3 text-sm"
-                    >
-                      <span className="min-w-0">
-                        <span className="block font-medium">
-                          {formatDateTime(appointment.scheduled_at)}
-                        </span>
-                        <span className="mt-0.5 block text-xs capitalize text-muted-foreground">
-                          {appointment.appointment_type} · {appointment.location}
-                        </span>
-                      </span>
-                      <Pill>{appointment.status}</Pill>
-                      <RecordActions
-                        label="appointment"
-                        onEdit={() =>
-                          setEditingRecord({ kind: "appointment", record: appointment })
-                        }
-                        onDelete={() => void deleteRecord("appointment", appointment.id)}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Section>
+      {/* TAB CONTENT: Overview */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <MiniStat label="Encounters" value={encounters.length} icon={ClipboardList} />
+            <MiniStat label="Appointments" value={appointments.length} icon={CalendarDays} />
+            <MiniStat label="Investigations" value={investigations.length} icon={Activity} />
+            <MiniStat label="Pregnancies" value={pregnancies.length} icon={HeartPulse} />
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2">
-            <Section
-              title="Prescriptions"
-              action={
-                <div className="flex items-center gap-1">
-                  <Button
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.15fr)_0.85fr]">
+            <div className="space-y-6">
+              {/* Latest Encounters Section */}
+              <Section
+                title="Recent encounters"
+                action={
+                  <button
                     type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={generatePrescriptionReport}
+                    onClick={() => setActiveTab("encounters")}
+                    className="text-xs font-semibold text-primary hover:underline"
                   >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  <Button
+                    View all ({encounters.length})
+                  </button>
+                }
+              >
+                {encounters.length === 0 ? (
+                  <Empty>No clinical encounters recorded yet.</Empty>
+                ) : (
+                  <ul className="divide-y divide-border/60">
+                    {encounters.slice(0, 4).map((encounter) => (
+                      <li key={encounter.id} className="flex items-center gap-3 py-3.5">
+                        <span
+                          className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+                            (encounter.danger_flags ?? []).length > 0
+                              ? "bg-destructive-soft text-destructive"
+                              : "bg-primary-soft text-primary"
+                          }`}
+                        >
+                          {(encounter.danger_flags ?? []).length > 0 ? (
+                            <ShieldAlert className="h-4 w-4" />
+                          ) : (
+                            <ClipboardList className="h-4 w-4" />
+                          )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold capitalize text-foreground">
+                              {encounter.visit_type}
+                            </span>
+                            {encounter.systolic && encounter.diastolic && (
+                              <span className="text-xs font-mono text-muted-foreground">
+                                BP: {encounter.systolic}/{encounter.diastolic}
+                              </span>
+                            )}
+                          </div>
+                          <span className="mt-0.5 block text-xs text-muted-foreground">
+                            {formatDateTime(encounter.visit_date)} · {encounter.location}
+                          </span>
+                        </div>
+                        {(encounter.danger_flags ?? []).length > 0 && (
+                          <Pill tone="urgent">Danger flags</Pill>
+                        )}
+                        <RecordActions
+                          label="clinical encounter"
+                          onEdit={() => setEditingRecord({ kind: "encounter", record: encounter })}
+                          onDelete={() => void deleteRecord("encounter", encounter.id)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Section>
+
+              {/* Latest Prescriptions Preview */}
+              <Section
+                title="Active prescriptions"
+                action={
+                  <button
                     type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => void shareImage(prescriptionReport())}
+                    onClick={() => setActiveTab("prescriptions")}
+                    className="text-xs font-semibold text-primary hover:underline"
                   >
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              }
-            >
-              {prescriptions.length === 0 ? (
-                <Empty>No prescriptions recorded.</Empty>
-              ) : (
-                <ul className="divide-y divide-border/70">
-                  {prescriptions.slice(0, 8).map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex items-center justify-between gap-3 py-3 text-sm"
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium">{item.medication}</span>
-                        <span className="mt-0.5 block text-xs text-muted-foreground">
-                          {[item.dose, item.frequency, item.duration].filter(Boolean).join(" · ") ||
-                            "Details not recorded"}
-                        </span>
-                      </span>
-                      <Pill tone={item.status === "active" ? "success" : "neutral"}>
-                        {item.status}
-                      </Pill>
-                      <RecordActions
-                        label="prescription"
-                        onEdit={() => setEditingRecord({ kind: "prescription", record: item })}
-                        onDelete={() => void deleteRecord("prescription", item.id)}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Section>
-            <Section
-              title="Referrals"
-              action={
-                <Button type="button" size="icon" variant="ghost" onClick={generatePatientReport}>
-                  <Download className="h-4 w-4" />
-                </Button>
-              }
-            >
-              {referrals.length === 0 ? (
-                <Empty>No referrals recorded.</Empty>
-              ) : (
-                <ul className="divide-y divide-border/70">
-                  {referrals.slice(0, 8).map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex items-center justify-between gap-3 py-3 text-sm"
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium">{item.destination}</span>
-                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                          {item.reason}
-                        </span>
-                      </span>
-                      <Pill tone={item.urgency === "emergency" ? "urgent" : "warning"}>
-                        {item.urgency}
-                      </Pill>
-                      <RecordActions
-                        label="referral"
-                        onEdit={() => setEditingRecord({ kind: "referral", record: item })}
-                        onDelete={() => void deleteRecord("referral", item.id)}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Section>
+                    Manage ({prescriptions.length})
+                  </button>
+                }
+              >
+                {prescriptions.length === 0 ? (
+                  <Empty>No active prescriptions recorded.</Empty>
+                ) : (
+                  <ul className="divide-y divide-border/60">
+                    {prescriptions.slice(0, 3).map((item) => (
+                      <li key={item.id} className="flex items-center justify-between gap-3 py-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground text-sm">{item.medication}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {[item.dose, item.frequency, item.duration].filter(Boolean).join(" · ")}
+                          </p>
+                        </div>
+                        <Pill tone={item.status === "active" ? "success" : "neutral"}>
+                          {item.status}
+                        </Pill>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Section>
+            </div>
+
+            {/* Sidebar Summary Info */}
+            <div className="space-y-6">
+              {/* Active Pregnancy details */}
+              <Section
+                title="Active pregnancy"
+                action={
+                  activePregnancy ? (
+                    <RecordActions
+                      label="pregnancy"
+                      onEdit={() =>
+                        setEditingRecord({ kind: "pregnancy", record: activePregnancy })
+                      }
+                      onDelete={() => void deleteRecord("pregnancy", activePregnancy.id)}
+                    />
+                  ) : null
+                }
+              >
+                {activePregnancy ? (
+                  <dl className="space-y-3 text-sm">
+                    <Detail
+                      label="Due date (EDD)"
+                      value={activePregnancy.edd ? formatDate(activePregnancy.edd) : "Not recorded"}
+                    />
+                    <Detail
+                      label="LMP Date"
+                      value={
+                        activePregnancy.lmp_date ? formatDate(activePregnancy.lmp_date) : "Not recorded"
+                      }
+                    />
+                    <Detail label="Gravida" value={String(activePregnancy.gravida ?? "—")} />
+                    <Detail label="Parity" value={String(activePregnancy.parity ?? "—")} />
+                    <Detail
+                      label="Risk level"
+                      value={activePregnancy.risk_level || "standard"}
+                    />
+                    {activePregnancy.risk_factors && (
+                      <Detail label="Risk factors" value={activePregnancy.risk_factors} />
+                    )}
+                  </dl>
+                ) : (
+                  <Empty>No active pregnancy recorded.</Empty>
+                )}
+              </Section>
+
+              {/* Patient Demographics summary */}
+              <Section
+                title="Patient profile preview"
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("info")}
+                    className="text-xs font-semibold text-primary hover:underline"
+                  >
+                    Full details
+                  </button>
+                }
+              >
+                <dl className="grid gap-3 text-sm">
+                  <Detail
+                    label="Date of birth"
+                    value={patient.date_of_birth ? formatDate(patient.date_of_birth) : "Not recorded"}
+                  />
+                  <Detail
+                    label="Location"
+                    value={
+                      [patient.village_town, patient.region].filter(Boolean).join(", ") ||
+                      "Not recorded"
+                    }
+                    icon={<MapPin className="h-3.5 w-3.5" />}
+                  />
+                  <Detail label="Blood group" value={patient.blood_group || "Not recorded"} />
+                  <Detail label="Allergies" value={patient.allergies || "None recorded"} />
+                  <Detail label="Next of kin" value={patient.next_of_kin_name || "Not recorded"} />
+                </dl>
+              </Section>
+            </div>
           </div>
         </div>
+      )}
 
-        <aside className="space-y-5 xl:sticky xl:top-24">
+      {/* TAB CONTENT: Encounters & Vitals */}
+      {activeTab === "encounters" && (
+        <div className="space-y-5">
           <Section
-            title="Active pregnancy"
-            action={
-              activePregnancy ? (
-                <div className="flex items-center gap-1">
-                  <HeartPulse className="mr-1 h-4 w-4 text-primary" />
-                  <RecordActions
-                    label="pregnancy"
-                    onEdit={() => setEditingRecord({ kind: "pregnancy", record: activePregnancy })}
-                    onDelete={() => void deleteRecord("pregnancy", activePregnancy.id)}
-                  />
-                </div>
-              ) : (
-                <HeartPulse className="h-4 w-4 text-primary" />
-              )
-            }
-            className="overflow-hidden"
+            title={`Clinical encounters (${encounters.length})`}
+            subtitle="Full consultation history, vitals observations, and danger signs."
+            icon={ClipboardList}
           >
-            {activePregnancy ? (
-              <div className="space-y-4">
-                <div className="rounded-2xl bg-primary-soft p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                    Current gestation
-                  </p>
-                  <div className="mt-2 flex items-end justify-between gap-3">
-                    <p className="font-display text-3xl font-bold text-primary">{formatGA(ga)}</p>
-                    <Pill tone={riskTone(activePregnancy.risk_level)}>
-                      {activePregnancy.risk_level} risk
-                    </Pill>
-                  </div>
-                </div>
-                <dl className="space-y-3 text-sm">
-                  <Detail
-                    label="Due date"
-                    value={activePregnancy.edd ? formatDate(activePregnancy.edd) : "Not recorded"}
-                  />
-                  <Detail
-                    label="Last menstrual period"
-                    value={
-                      activePregnancy.lmp_date
-                        ? formatDate(activePregnancy.lmp_date)
-                        : "Not recorded"
-                    }
-                  />
-                </dl>
-              </div>
+            {encounters.length === 0 ? (
+              <Empty>No clinical encounters recorded yet. Use 'Add care record' above.</Empty>
             ) : (
-              <Empty>No active pregnancy recorded.</Empty>
+              <div className="space-y-4">
+                {encounters.map((encounter) => (
+                  <div
+                    key={encounter.id}
+                    className="rounded-2xl border border-border/70 bg-card p-4 sm:p-5 shadow-xs space-y-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/50 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-base text-foreground capitalize">
+                            {encounter.visit_type} encounter
+                          </h3>
+                          <Pill tone="primary">{encounter.location}</Pill>
+                          {(encounter.danger_flags ?? []).length > 0 && (
+                            <Pill tone="urgent" withDot>
+                              {(encounter.danger_flags ?? []).length} danger flag(s)
+                            </Pill>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {formatDateTime(encounter.visit_date)}
+                        </p>
+                      </div>
+                      <RecordActions
+                        label="encounter"
+                        onEdit={() => setEditingRecord({ kind: "encounter", record: encounter })}
+                        onDelete={() => void deleteRecord("encounter", encounter.id)}
+                      />
+                    </div>
+
+                    {/* Vitals Badges Grid */}
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6 text-xs">
+                      {encounter.systolic && encounter.diastolic && (
+                        <div className="rounded-xl border border-border/60 bg-muted/40 p-2">
+                          <span className="text-muted-foreground block text-[11px]">BP (mmHg)</span>
+                          <span className="font-bold font-mono text-foreground text-sm">
+                            {encounter.systolic}/{encounter.diastolic}
+                          </span>
+                        </div>
+                      )}
+                      {encounter.pulse && (
+                        <div className="rounded-xl border border-border/60 bg-muted/40 p-2">
+                          <span className="text-muted-foreground block text-[11px]">Pulse</span>
+                          <span className="font-bold font-mono text-foreground text-sm">
+                            {encounter.pulse} bpm
+                          </span>
+                        </div>
+                      )}
+                      {encounter.temperature && (
+                        <div className="rounded-xl border border-border/60 bg-muted/40 p-2">
+                          <span className="text-muted-foreground block text-[11px]">Temp</span>
+                          <span className="font-bold font-mono text-foreground text-sm">
+                            {encounter.temperature}°C
+                          </span>
+                        </div>
+                      )}
+                      {encounter.weight_kg && (
+                        <div className="rounded-xl border border-border/60 bg-muted/40 p-2">
+                          <span className="text-muted-foreground block text-[11px]">Weight</span>
+                          <span className="font-bold font-mono text-foreground text-sm">
+                            {encounter.weight_kg} kg
+                          </span>
+                        </div>
+                      )}
+                      {encounter.fundal_height_cm && (
+                        <div className="rounded-xl border border-border/60 bg-muted/40 p-2">
+                          <span className="text-muted-foreground block text-[11px]">Fundal Ht</span>
+                          <span className="font-bold font-mono text-foreground text-sm">
+                            {encounter.fundal_height_cm} cm
+                          </span>
+                        </div>
+                      )}
+                      {encounter.fetal_heart_rate && (
+                        <div className="rounded-xl border border-border/60 bg-muted/40 p-2">
+                          <span className="text-muted-foreground block text-[11px]">FHR</span>
+                          <span className="font-bold font-mono text-foreground text-sm">
+                            {encounter.fetal_heart_rate} bpm
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Clinical Details: Complaints, Assessment, Plan */}
+                    <div className="grid gap-2 pt-2 text-xs text-muted-foreground">
+                      {encounter.complaints && (
+                        <p>
+                          <strong className="text-foreground">Complaints:</strong>{" "}
+                          {encounter.complaints}
+                        </p>
+                      )}
+                      {encounter.assessment && (
+                        <p>
+                          <strong className="text-foreground">Assessment:</strong>{" "}
+                          {encounter.assessment}
+                        </p>
+                      )}
+                      {encounter.plan && (
+                        <p>
+                          <strong className="text-foreground">Treatment Plan:</strong>{" "}
+                          {encounter.plan}
+                        </p>
+                      )}
+                      {Boolean(encounter.danger_flags && encounter.danger_flags.length > 0) && (
+                        <div className="rounded-xl border border-destructive/20 bg-destructive-soft p-2.5 text-destructive">
+                          <strong>Danger Flags:</strong> {encounter.danger_flags?.join(", ")}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+        </div>
+      )}
+
+      {/* TAB CONTENT: Appointments */}
+      {activeTab === "appointments" && (
+        <div className="space-y-5">
+          <Section
+            title={`Care Appointments (${appointments.length})`}
+            subtitle="Follow-up clinic visits and home outreach visits."
+            icon={CalendarDays}
+          >
+            {appointments.length === 0 ? (
+              <Empty>No appointments scheduled. Add one using the care actions bar.</Empty>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {appointments.map((appointment) => (
+                  <div
+                    key={appointment.id}
+                    className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs space-y-3 flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-semibold text-foreground text-sm">
+                          {formatDateTime(appointment.scheduled_at)}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <Pill
+                            tone={
+                              appointment.status === "completed"
+                                ? "success"
+                                : appointment.status === "cancelled"
+                                  ? "urgent"
+                                  : "primary"
+                            }
+                          >
+                            {appointment.status}
+                          </Pill>
+                          <RecordActions
+                            label="appointment"
+                            onEdit={() =>
+                              setEditingRecord({ kind: "appointment", record: appointment })
+                            }
+                            onDelete={() => void deleteRecord("appointment", appointment.id)}
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                        <p className="capitalize">
+                          <strong>Type:</strong> {appointment.appointment_type} · {appointment.location}
+                        </p>
+                        {appointment.reason && (
+                          <p>
+                            <strong>Reason:</strong> {appointment.reason}
+                          </p>
+                        )}
+                        {appointment.notes && (
+                          <p>
+                            <strong>Notes:</strong> {appointment.notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+        </div>
+      )}
+
+      {/* TAB CONTENT: Investigations */}
+      {activeTab === "investigations" && (
+        <div className="space-y-5">
+          <Section
+            title={`Investigations & Lab Tests (${investigations.length})`}
+            subtitle="Laboratory tests, ultrasound scans, and results."
+            icon={Activity}
+          >
+            {investigations.length === 0 ? (
+              <Empty>No investigations recorded.</Empty>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {investigations.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs space-y-3 flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-bold text-foreground text-sm">{item.name}</span>
+                        <div className="flex items-center gap-1.5">
+                          <Pill
+                            tone={
+                              item.abnormal
+                                ? "urgent"
+                                : item.status === "completed"
+                                  ? "success"
+                                  : "warning"
+                            }
+                          >
+                            {item.status}
+                          </Pill>
+                          <RecordActions
+                            label="investigation"
+                            onEdit={() => setEditingRecord({ kind: "investigation", record: item })}
+                            onDelete={() => void deleteRecord("investigation", item.id)}
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                        {item.result && (
+                          <p className="font-medium text-foreground">
+                            <strong>Result:</strong> {item.result}
+                          </p>
+                        )}
+                        {item.result_date && (
+                          <p>Result date: {formatDate(item.result_date)}</p>
+                        )}
+                        {item.due_date && <p>Due: {formatDate(item.due_date)}</p>}
+                        {item.notes && <p>Notes: {item.notes}</p>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+        </div>
+      )}
+
+      {/* TAB CONTENT: Prescriptions & Referrals */}
+      {activeTab === "prescriptions" && (
+        <div className="space-y-6">
+          <Section
+            title={`Prescriptions (${prescriptions.length})`}
+            icon={FileText}
+            action={
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl text-xs gap-1.5"
+                  onClick={generatePrescriptionReport}
+                >
+                  <Download className="h-3.5 w-3.5 text-primary" /> Report
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl text-xs gap-1.5"
+                  onClick={() => void shareImage(prescriptionReport())}
+                >
+                  <Share2 className="h-3.5 w-3.5 text-emerald-600" /> Share
+                </Button>
+              </div>
+            }
+          >
+            {prescriptions.length === 0 ? (
+              <Empty>No prescriptions recorded for this patient.</Empty>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {prescriptions.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-bold text-foreground text-sm">{item.medication}</p>
+                      <div className="flex items-center gap-1.5">
+                        <Pill tone={item.status === "active" ? "success" : "neutral"}>
+                          {item.status}
+                        </Pill>
+                        <RecordActions
+                          label="prescription"
+                          onEdit={() => setEditingRecord({ kind: "prescription", record: item })}
+                          onDelete={() => void deleteRecord("prescription", item.id)}
+                        />
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                      <p>
+                        <strong>Dosage:</strong> {[item.dose, item.frequency, item.route].filter(Boolean).join(" · ") || "Not specified"}
+                      </p>
+                      {item.duration && <p>Duration: {item.duration}</p>}
+                      {item.instructions && <p>Instructions: {item.instructions}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </Section>
 
-          <Section
-            title="Patient information"
-            action={<UserRound className="h-4 w-4 text-primary" />}
-          >
-            <dl className="grid gap-4 text-sm">
+          <Section title={`Referrals (${referrals.length})`} icon={ArrowLeft}>
+            {referrals.length === 0 ? (
+              <Empty>No medical referrals recorded.</Empty>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {referrals.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-bold text-foreground text-sm">{item.destination}</p>
+                      <div className="flex items-center gap-1.5">
+                        <Pill tone={item.urgency === "emergency" ? "urgent" : "warning"}>
+                          {item.urgency}
+                        </Pill>
+                        <RecordActions
+                          label="referral"
+                          onEdit={() => setEditingRecord({ kind: "referral", record: item })}
+                          onDelete={() => void deleteRecord("referral", item.id)}
+                        />
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                      <p><strong>Reason:</strong> {item.reason}</p>
+                      {item.notes && <p>Notes: {item.notes}</p>}
+                      {item.referred_at && <p>Referred: {formatDateTime(item.referred_at)}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+        </div>
+      )}
+
+      {/* TAB CONTENT: Patient Info & Profile */}
+      {activeTab === "info" && (
+        <div className="space-y-6">
+          <Section title="Demographic & Medical Profile" icon={UserRound}>
+            <dl className="grid gap-4 sm:grid-cols-2 text-sm">
+              <Detail
+                label="Full name"
+                value={`${patient.first_name} ${patient.last_name}`}
+              />
+              <Detail label="Patient ID" value={patient.patient_number} />
               <Detail
                 label="Date of birth"
-                value={patient.date_of_birth ? formatDate(patient.date_of_birth) : "Not recorded"}
+                value={
+                  patient.date_of_birth
+                    ? `${formatDate(patient.date_of_birth)} (${age(patient.date_of_birth)} years)`
+                    : "Not recorded"
+                }
               />
               <Detail
-                label="Location"
-                value={
-                  [patient.village_town, patient.region].filter(Boolean).join(", ") ||
-                  "Not recorded"
-                }
+                label="Contact phone"
+                value={patient.phone || "Not recorded"}
+                icon={<Phone className="h-3.5 w-3.5" />}
+              />
+              <Detail
+                label="Village / Town"
+                value={patient.village_town || "Not recorded"}
                 icon={<MapPin className="h-3.5 w-3.5" />}
               />
+              <Detail label="Region" value={patient.region || "Not recorded"} />
+              <Detail label="Residential address" value={patient.address || "Not recorded"} />
               <Detail label="Blood group" value={patient.blood_group || "Not recorded"} />
-              <Detail label="Allergies" value={patient.allergies || "None recorded"} />
-              <Detail label="Next of kin" value={patient.next_of_kin_name || "Not recorded"} />
-              {patient.next_of_kin_phone && (
-                <Detail
-                  label="Next of kin phone"
-                  value={patient.next_of_kin_phone}
-                  icon={<Phone className="h-3.5 w-3.5" />}
-                />
-              )}
+              <Detail label="Known allergies" value={patient.allergies || "None recorded"} />
+              <Detail
+                label="Medical history"
+                value={patient.medical_history || "None recorded"}
+              />
+              <Detail
+                label="Next of kin"
+                value={patient.next_of_kin_name || "Not recorded"}
+              />
+              <Detail
+                label="Next of kin phone"
+                value={patient.next_of_kin_phone || "Not recorded"}
+                icon={<Phone className="h-3.5 w-3.5" />}
+              />
+              <Detail label="Registered on" value={formatDateTime(patient.created_at)} />
+              <Detail label="Last updated" value={formatDateTime(patient.updated_at)} />
             </dl>
           </Section>
-        </aside>
-      </div>
+        </div>
+      )}
       {activeReport && (
         <ReportPreview report={activeReport} onClose={() => setActiveReport(null)} />
       )}
@@ -1652,14 +2029,14 @@ function MiniStat({
   );
 }
 
-function Detail({ label, value, icon }: { label: string; value: string; icon?: ReactNode }) {
+function Detail({ label, value, icon }: { label: string; value?: ReactNode; icon?: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-3 border-b border-border/60 pb-3 last:border-0 last:pb-0">
       <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
         {icon}
         {label}
       </dt>
-      <dd className="max-w-[60%] text-right text-sm font-medium">{value}</dd>
+      <dd className="max-w-[60%] text-right text-sm font-medium">{value ?? "—"}</dd>
     </div>
   );
 }

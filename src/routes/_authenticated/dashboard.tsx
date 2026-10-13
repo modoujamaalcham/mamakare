@@ -31,7 +31,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PageHeader, Section, Pill, Empty, Loading } from "@/components/ui-kit";
+import { PageHeader, Section, Pill, Empty, Loading, MetricCard } from "@/components/ui-kit";
 import { formatTime, formatDate, formatGA, gestationalAge } from "@/lib/clinical";
 import { useMe } from "@/lib/db";
 
@@ -109,41 +109,42 @@ function Dashboard() {
 
   return (
     <div className="space-y-6 pb-8">
-      <div className="relative overflow-hidden rounded-3xl bg-primary p-6 text-primary-foreground shadow-lg shadow-primary/10 md:p-8">
+      {/* Modern Clinical Dashboard Hero Banner */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-emerald-900 via-teal-900 to-slate-950 p-6 text-white shadow-xl shadow-teal-950/20 md:p-8">
         <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="mb-2 text-sm font-medium text-primary-foreground/70">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[11px] font-bold uppercase tracking-wider text-teal-100 mb-3">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               {new Intl.DateTimeFormat("en-GB", {
                 timeZone: "Africa/Banjul",
                 dateStyle: "full",
               }).format(new Date())}
-            </p>
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl font-display text-white">
               {greet}
               {name ? `, ${name}` : ""}
             </h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-primary-foreground/75">
-              Keep today’s care work moving with a quick view of visits, follow-ups, and patient
-              safety signals.
+            <p className="mt-2 max-w-xl text-sm leading-6 text-teal-100/85 font-medium">
+              Keep today’s maternal care work moving with an instant view of visits, clinical follow-ups, and patient safety alerts.
             </p>
           </div>
           <Button
             asChild
             variant="secondary"
-            className="h-11 rounded-xl bg-white/15 text-primary-foreground shadow-none hover:bg-white/25"
+            className="h-11 rounded-xl bg-white text-teal-950 font-bold shadow-md hover:bg-white/95 active:scale-95"
           >
             <Link to="/patients/new">
-              <Plus className="h-4 w-4" /> New patient
+              <Plus className="h-4 w-4" /> Register patient
             </Link>
           </Button>
         </div>
         <Activity
-          className="absolute -bottom-10 -right-3 h-48 w-48 text-white/10"
+          className="pointer-events-none absolute -bottom-10 -right-3 h-52 w-52 text-white/5"
           strokeWidth={1}
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -155,54 +156,60 @@ function Dashboard() {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search patient by name, phone or patient number"
-            className="h-12 rounded-xl border-border/80 bg-card pl-11 shadow-sm"
+            placeholder="Search patient by name, phone, or ID..."
+            className="h-12 rounded-xl border-border/80 bg-card pl-11 text-sm shadow-xs focus-visible:ring-1"
           />
         </form>
         <div className="flex gap-2">
-          <Button asChild variant="outline" className="h-12 flex-1 rounded-xl bg-card sm:flex-none">
+          <Button asChild variant="outline" className="h-12 flex-1 rounded-xl bg-card border-border/80 sm:flex-none">
             <Link to="/patients">
-              <Stethoscope className="h-4 w-4" /> Patients
+              <Stethoscope className="h-4 w-4 text-primary" /> Patients
             </Link>
           </Button>
-          <Button asChild variant="outline" className="h-12 flex-1 rounded-xl bg-card sm:flex-none">
+          <Button asChild variant="outline" className="h-12 flex-1 rounded-xl bg-card border-border/80 sm:flex-none">
             <Link to="/schedule">
-              <CalendarCheck2 className="h-4 w-4" /> Schedule
+              <CalendarCheck2 className="h-4 w-4 text-primary" /> Schedule
             </Link>
           </Button>
         </div>
       </div>
 
       {isLoading || !data ? (
-        <Loading />
+        <Loading count={4} />
       ) : (
-        <div className="space-y-5">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            <MetricCard
               label="Today's visits"
               value={data.today.length}
               icon={CalendarCheck2}
+              tone="primary"
               hint="Scheduled today"
+              onClick={() => navigate({ to: "/schedule" })}
             />
-            <Stat
-              label="Overdue"
+            <MetricCard
+              label="Overdue follow-ups"
               value={data.overdue.length}
-              tone={data.overdue.length ? "warning" : undefined}
+              tone={data.overdue.length ? "warning" : "neutral"}
               icon={Clock3}
-              hint={data.overdue.length ? "Needs follow-up" : "All caught up"}
+              hint={data.overdue.length ? "Action required" : "All caught up"}
+              onClick={() => navigate({ to: "/schedule" })}
             />
-            <Stat
+            <MetricCard
               label="Active pregnancies"
               value={data.activeCount}
+              tone="success"
               icon={Activity}
-              hint="Currently enrolled"
+              hint="Enrolled in care"
+              onClick={() => navigate({ to: "/patients" })}
             />
-            <Stat
-              label="High risk"
+            <MetricCard
+              label="High risk cases"
               value={data.highRisk}
-              tone={data.highRisk ? "urgent" : undefined}
+              tone={data.highRisk ? "urgent" : "neutral"}
               icon={ShieldAlert}
-              hint={`${data.nearTerm} at 36+ weeks`}
+              hint={`${data.nearTerm} near term (≥36w)`}
+              onClick={() => navigate({ to: "/patients" })}
             />
           </div>
 
@@ -345,7 +352,7 @@ function Dashboard() {
                       </span>
                       <span className="flex items-center justify-between gap-3">
                         <span className="flex flex-wrap gap-1">
-                          {e.danger_flags.map((f) => (
+                          {(e.danger_flags ?? []).map((f) => (
                             <Pill key={f} tone="urgent">
                               {f}
                             </Pill>

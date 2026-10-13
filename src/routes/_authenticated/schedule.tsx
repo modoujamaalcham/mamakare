@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Empty, Loading, Pill, Section } from "@/components/ui-kit";
+import { Empty, Loading, Pill, Section, MetricCard } from "@/components/ui-kit";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, formatDateTime, formatTime } from "@/lib/clinical";
 
@@ -58,28 +58,30 @@ function Schedule() {
 
   return (
     <div className="w-full space-y-6 pb-8">
-      <div className="relative overflow-hidden rounded-3xl bg-primary p-6 text-primary-foreground shadow-lg shadow-primary/10 md:p-8">
+      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary via-primary/95 to-primary/85 p-6 text-primary-foreground shadow-lg shadow-primary/10 md:p-8">
         <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="mb-2 text-sm font-medium text-primary-foreground/70">Care coordination</p>
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Schedule</h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-primary-foreground/75">
-              Keep clinic appointments and home visits organized, visible, and easy to act on.
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary-foreground/80">
+              Care Coordination & Field Visits
+            </p>
+            <h1 className="text-3xl font-bold tracking-tight md:text-4xl font-display">Schedule</h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-primary-foreground/85">
+              Keep clinic consultations and community outreach visits organized, visible, and actionable.
             </p>
           </div>
           <CalendarDays className="hidden h-16 w-16 text-white/15 sm:block" strokeWidth={1} />
         </div>
         <CalendarCheck2
-          className="absolute -bottom-8 -right-2 h-44 w-44 text-white/10"
+          className="pointer-events-none absolute -bottom-8 -right-2 h-44 w-44 text-white/10"
           strokeWidth={1}
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MiniStat label="Today" value={todayCount} icon={CalendarCheck2} />
-        <MiniStat label="Scheduled" value={scheduledCount} icon={Clock3} />
-        <MiniStat label="Home visits" value={homeVisits} icon={Home} />
-        <MiniStat label="All appointments" value={data?.length ?? 0} icon={UsersRound} />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <MetricCard label="Today's visits" value={todayCount} icon={CalendarCheck2} tone="primary" hint="Due today" />
+        <MetricCard label="Scheduled" value={scheduledCount} icon={Clock3} tone="neutral" hint="Upcoming care" />
+        <MetricCard label="Home visits" value={homeVisits} icon={Home} tone="success" hint="Community visits" />
+        <MetricCard label="Total records" value={data?.length ?? 0} icon={UsersRound} tone="neutral" hint="In queue" />
       </div>
 
       <Section title="Appointment list" action={<CalendarDays className="h-4 w-4 text-primary" />}>

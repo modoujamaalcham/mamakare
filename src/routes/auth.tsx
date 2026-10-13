@@ -88,37 +88,37 @@ function AuthPage() {
 
   return (
     <main className="min-h-screen bg-background lg:grid lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="relative hidden overflow-hidden bg-primary p-10 text-primary-foreground lg:flex lg:flex-col lg:justify-between xl:p-16">
+      <section className="relative hidden overflow-hidden bg-gradient-to-br from-primary via-primary/95 to-primary/85 p-10 text-primary-foreground lg:flex lg:flex-col lg:justify-between xl:p-16">
         <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-white/10" />
         <div className="absolute -bottom-40 -left-20 h-96 w-96 rounded-full border-[48px] border-white/10" />
         <Logo />
         <div className="relative max-w-xl">
-          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-primary-foreground/70">
-            Mamakare care workspace
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-primary-foreground/75">
+            Mamakare Care Workspace
           </p>
-          <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight xl:text-6xl">
+          <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight xl:text-5xl font-display">
             Better care, connected from first visit to follow-up.
           </h1>
-          <p className="mt-6 max-w-md text-base leading-7 text-primary-foreground/75">
-            A focused workspace for maternal and patient care teams in The Gambia.
+          <p className="mt-5 max-w-md text-base leading-relaxed text-primary-foreground/80">
+            A secure clinical workspace for midwives, nurses, and maternal care teams across The Gambia.
           </p>
-          <div className="mt-10 space-y-3 text-sm text-primary-foreground/90">
-            {["Secure clinical records", "Clear visit planning", "Built for mobile teams"].map(
+          <div className="mt-8 space-y-2.5 text-sm text-primary-foreground/90">
+            {["Encrypted clinical records", "Real-time gestational progress tracking", "Designed for mobile & field outreach"].map(
               (item) => (
-                <div key={item} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" /> {item}
+                <div key={item} className="flex items-center gap-2.5">
+                  <CheckCircle2 className="h-4 w-4 text-white" /> {item}
                 </div>
               ),
             )}
           </div>
         </div>
         <p className="relative text-xs text-primary-foreground/60">
-          Mamakare · Secure care coordination
+          Mamakare · The Gambia Maternal Health Management
         </p>
       </section>
       <section className="flex min-h-screen items-center justify-center px-5 py-8 sm:px-8">
         <div className="w-full max-w-md">
-          <div className="mb-10 flex items-center justify-between lg:justify-end">
+          <div className="mb-8 flex items-center justify-between lg:justify-end">
             <div className="lg:hidden">
               <Logo />
             </div>
@@ -126,19 +126,19 @@ function AuthPage() {
               type="button"
               onClick={toggleTheme}
               aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-              className="grid h-10 w-10 place-items-center rounded-xl border border-border text-muted-foreground hover:bg-muted"
+              className="grid h-10 w-10 place-items-center rounded-xl border border-border/70 bg-card/60 text-muted-foreground hover:bg-muted active:scale-95 transition-all"
             >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {theme === "dark" ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4" />}
             </button>
           </div>
-          <div className="mb-7">
-            <div className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-primary-soft text-primary">
+          <div className="mb-6">
+            <div className="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-primary-soft text-primary">
               <ShieldCheck className="h-6 w-6" />
             </div>
-            <h2 className="text-3xl font-bold tracking-tight">Welcome back</h2>
-            <p className="mt-2 text-muted-foreground">Sign in to your secure care workspace.</p>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight font-display">Welcome back</h2>
+            <p className="mt-1.5 text-sm text-muted-foreground">Sign in to your clinical care workspace.</p>
           </div>
-          <form onSubmit={submit} className="card-surface space-y-5 p-5 sm:p-6">
+          <form onSubmit={submit} className="card-surface rounded-3xl border border-border/80 p-6 sm:p-7 shadow-sm space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="id">Email address</Label>
               <Input

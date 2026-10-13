@@ -57,47 +57,70 @@ function Index() {
     },
   ];
   return (
-    <main className="min-h-screen bg-background">
-      <div className="mx-auto flex max-w-5xl flex-col px-5 py-8 md:py-16">
-        <header className="flex items-center gap-2">
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex max-w-6xl flex-col px-5 py-8 md:py-16">
+        <header className="flex items-center justify-between">
           <Logo />
+          <Button asChild variant="outline" size="sm" className="rounded-xl border-border/80">
+            <Link to="/auth">Staff sign in</Link>
+          </Button>
         </header>
-        <section className="mt-16 max-w-2xl md:mt-24">
-          <p className="text-sm font-medium uppercase tracking-widest text-primary">
-            For midwives, nurses & doctors
-          </p>
-          <h1 className="mt-4 text-4xl font-extrabold leading-tight md:text-6xl">
-            Care for every mother, <span className="text-primary">visit by visit.</span>
+
+        <section className="mt-14 max-w-3xl md:mt-24">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary-soft/80 px-3.5 py-1 text-xs font-semibold text-primary">
+            <HeartPulse className="h-3.5 w-3.5" />
+            <span>Maternal Health & Clinical EMR · The Gambia</span>
+          </div>
+
+          <h1 className="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl font-display">
+            Care for every mother,{" "}
+            <span className="bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">
+              visit by visit.
+            </span>
           </h1>
-          <p className="mt-5 text-lg text-muted-foreground">
-            Mamakare keeps the full story of each patient — from first antenatal visit to delivery
-            and postnatal care — on your phone.
+
+          <p className="mt-6 text-base sm:text-lg leading-relaxed text-muted-foreground max-w-2xl">
+            Mamakare brings the complete clinical journey of each expectant mother — from early antenatal booking to delivery, postnatal care, and home visits — onto your smartphone and tablet with full PWA capability.
           </p>
-          <div className="mt-8 flex gap-3">
-            <Button asChild size="lg">
-              <Link to="/auth">Sign in</Link>
+
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Button asChild size="lg" className="rounded-xl px-7 font-bold shadow-md shadow-primary/20">
+              <Link to="/auth">Open workspace</Link>
             </Button>
           </div>
         </section>
-        <section className="mt-20 grid gap-4 sm:grid-cols-2">
+
+        <section className="mt-20 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((f) => (
-            <div key={f.t} className="card-surface p-5">
-              <f.icon className="h-5 w-5 text-primary" />
-              <h3 className="mt-3 font-semibold">{f.t}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{f.d}</p>
+            <div key={f.t} className="card-interactive p-5 flex flex-col justify-between">
+              <div>
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary-soft text-primary">
+                  <f.icon className="h-5 w-5" />
+                </div>
+                <h3 className="mt-4 font-bold text-base text-foreground font-display">{f.t}</h3>
+                <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground leading-relaxed">{f.d}</p>
+              </div>
             </div>
           ))}
         </section>
+
+        <footer className="mt-24 border-t border-border/60 pt-8 text-center text-xs text-muted-foreground">
+          <p>© {new Date().getFullYear()} Mamakare. Designed for midwives, nurses, and clinical teams across The Gambia.</p>
+        </footer>
       </div>
     </main>
   );
 }
 
-export function Logo() {
+export function Logo({ showText = true }: { showText?: boolean }) {
   return (
-    <span className="flex items-center gap-2 font-display text-lg font-extrabold">
-      <img src="/branding/mamakare.jpg" alt="" className="h-8 w-8 rounded-lg object-cover" />
-      Mamakare
+    <span className="flex items-center gap-2.5 font-display text-lg font-extrabold tracking-tight">
+      <img
+        src="/branding/mamakare.jpg"
+        alt="Mamakare logo"
+        className="h-8 w-8 rounded-xl object-cover ring-1 ring-border/80 shadow-xs shrink-0"
+      />
+      {showText && <span className="text-foreground">Mamakare</span>}
     </span>
   );
 }

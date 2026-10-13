@@ -85,21 +85,25 @@ function More() {
 
   return (
     <div className="w-full space-y-6 pb-8">
-      <div className="relative overflow-hidden rounded-3xl bg-primary p-6 text-primary-foreground shadow-lg shadow-primary/10 md:p-8">
+      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary via-primary/95 to-primary/85 p-6 text-primary-foreground shadow-lg shadow-primary/10 md:p-8">
         <div className="relative z-10 flex items-center gap-4">
-          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-white/15">
+          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-white/20 backdrop-blur-md">
             <UserRound className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-sm font-medium text-primary-foreground/70">Workspace settings</p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight md:text-4xl">More</h1>
-            <p className="mt-2 text-sm text-primary-foreground/75">
-              Account, appearance, and security information.
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary-foreground/80">
+              Workspace & Security
+            </p>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight md:text-4xl font-display">
+              Settings
+            </h1>
+            <p className="mt-1.5 text-sm text-primary-foreground/85">
+              Account settings, appearance preferences, and clinic configuration.
             </p>
           </div>
         </div>
         <ShieldCheck
-          className="absolute -bottom-8 -right-2 h-44 w-44 text-white/10"
+          className="pointer-events-none absolute -bottom-8 -right-2 h-44 w-44 text-white/10"
           strokeWidth={1}
         />
       </div>
