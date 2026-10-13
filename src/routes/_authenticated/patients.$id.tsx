@@ -12,9 +12,11 @@ import {
   FileText,
   HeartPulse,
   MapPin,
+  Pencil,
   Phone,
   Share2,
   ShieldAlert,
+  Trash2,
   UserRound,
 } from "lucide-react";
 import { Section, Pill, Empty, Loading, riskTone } from "@/components/ui-kit";
@@ -24,21 +26,51 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import type {
+  Appointment,
+  Encounter,
+  Investigation,
+  Pregnancy,
+  Prescription,
+  Referral,
+} from "@/lib/db";
 import { useCompanySettings, usePatient } from "@/lib/db";
 import { formatDate, formatDateTime, formatGA, gestationalAge } from "@/lib/clinical";
 import type { ReportInput } from "@/lib/reports";
 import { shareReportImage } from "@/lib/reports";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_authenticated/patients/$id")({
   head: () => ({ meta: [{ title: "Patient — Mamakare" }] }),
   component: PatientDetail,
 });
 
+type EditableRecord =
+  | { kind: "pregnancy"; record: Pregnancy }
+  | { kind: "encounter"; record: Encounter }
+  | { kind: "investigation"; record: Investigation }
+  | { kind: "appointment"; record: Appointment }
+  | { kind: "prescription"; record: Prescription }
+  | { kind: "referral"; record: Referral };
+
+type RecordTable = EditableRecord["kind"];
+
 function PatientDetail() {
   const { id } = Route.useParams();
   const { data, isLoading, error } = usePatient(id);
   const { data: company } = useCompanySettings();
+  const queryClient = useQueryClient();
   const [activeReport, setActiveReport] = useState<ReportInput | null>(null);
+  const [editingRecord, setEditingRecord] = useState<EditableRecord | null>(null);
 
   if (isLoading) return <Loading />;
   if (error || !data) return <Empty>Could not load this patient record.</Empty>;
@@ -155,6 +187,29 @@ function PatientDetail() {
     }
   }
 
+  async function deleteRecord(kind: RecordTable, recordId: string) {
+    const result =
+      kind === "pregnancy"
+        ? await supabase.from("pregnancies").delete().eq("id", recordId)
+        : kind === "encounter"
+          ? await supabase.from("encounters").delete().eq("id", recordId)
+          : kind === "investigation"
+            ? await supabase.from("investigations").delete().eq("id", recordId)
+            : kind === "appointment"
+              ? await supabase.from("appointments").delete().eq("id", recordId)
+              : kind === "prescription"
+                ? await supabase.from("prescriptions").delete().eq("id", recordId)
+                : await supabase.from("referrals").delete().eq("id", recordId);
+    if (result.error) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success(`${actionLabel(kind)} deleted`);
+    await queryClient.invalidateQueries({ queryKey: ["patient", patient.id] });
+    await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    await queryClient.invalidateQueries({ queryKey: ["schedule"] });
+  }
+
   return (
     <div className="w-full space-y-5 pb-8">
       <Link
@@ -265,6 +320,11 @@ function PatientDetail() {
                     {encounter.danger_flags.length > 0 && (
                       <Pill tone="urgent">Needs attention</Pill>
                     )}
+                    <RecordActions
+                      label="clinical encounter"
+                      onEdit={() => setEditingRecord({ kind: "encounter", record: encounter })}
+                      onDelete={() => void deleteRecord("encounter", encounter.id)}
+                    />
                   </li>
                 ))}
               </ul>
@@ -294,6 +354,11 @@ function PatientDetail() {
                       >
                         {item.status}
                       </Pill>
+                      <RecordActions
+                        label="investigation"
+                        onEdit={() => setEditingRecord({ kind: "investigation", record: item })}
+                        onDelete={() => void deleteRecord("investigation", item.id)}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -321,6 +386,13 @@ function PatientDetail() {
                         </span>
                       </span>
                       <Pill>{appointment.status}</Pill>
+                      <RecordActions
+                        label="appointment"
+                        onEdit={() =>
+                          setEditingRecord({ kind: "appointment", record: appointment })
+                        }
+                        onDelete={() => void deleteRecord("appointment", appointment.id)}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -371,6 +443,11 @@ function PatientDetail() {
                       <Pill tone={item.status === "active" ? "success" : "neutral"}>
                         {item.status}
                       </Pill>
+                      <RecordActions
+                        label="prescription"
+                        onEdit={() => setEditingRecord({ kind: "prescription", record: item })}
+                        onDelete={() => void deleteRecord("prescription", item.id)}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -402,6 +479,11 @@ function PatientDetail() {
                       <Pill tone={item.urgency === "emergency" ? "urgent" : "warning"}>
                         {item.urgency}
                       </Pill>
+                      <RecordActions
+                        label="referral"
+                        onEdit={() => setEditingRecord({ kind: "referral", record: item })}
+                        onDelete={() => void deleteRecord("referral", item.id)}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -413,7 +495,20 @@ function PatientDetail() {
         <aside className="space-y-5 xl:sticky xl:top-24">
           <Section
             title="Active pregnancy"
-            action={<HeartPulse className="h-4 w-4 text-primary" />}
+            action={
+              activePregnancy ? (
+                <div className="flex items-center gap-1">
+                  <HeartPulse className="mr-1 h-4 w-4 text-primary" />
+                  <RecordActions
+                    label="pregnancy"
+                    onEdit={() => setEditingRecord({ kind: "pregnancy", record: activePregnancy })}
+                    onDelete={() => void deleteRecord("pregnancy", activePregnancy.id)}
+                  />
+                </div>
+              ) : (
+                <HeartPulse className="h-4 w-4 text-primary" />
+              )
+            }
             className="overflow-hidden"
           >
             {activePregnancy ? (
@@ -483,12 +578,399 @@ function PatientDetail() {
       {activeReport && (
         <ReportPreview report={activeReport} onClose={() => setActiveReport(null)} />
       )}
+      {editingRecord && (
+        <EditRecordDialog
+          patientId={patient.id}
+          editing={editingRecord}
+          onClose={() => setEditingRecord(null)}
+          onSaved={async () => {
+            setEditingRecord(null);
+            await queryClient.invalidateQueries({ queryKey: ["patient", patient.id] });
+            await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+            await queryClient.invalidateQueries({ queryKey: ["schedule"] });
+          }}
+        />
+      )}
     </div>
   );
 }
 
 type CareAction =
   "pregnancy" | "encounter" | "investigation" | "appointment" | "prescription" | "referral";
+
+function RecordActions({
+  label,
+  onEdit,
+  onDelete,
+}: {
+  label: string;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  return (
+    <>
+      <div className="flex shrink-0 items-center gap-0.5">
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8 rounded-lg"
+          aria-label={`Edit ${label}`}
+          title={`Edit ${label}`}
+          onClick={onEdit}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8 rounded-lg text-destructive hover:text-destructive"
+          aria-label={`Delete ${label}`}
+          title={`Delete ${label}`}
+          onClick={() => setDeleteOpen(true)}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this {label}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This record will be permanently removed from the patient file. This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={onDelete}
+            >
+              Delete record
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+function EditRecordDialog({
+  patientId,
+  editing,
+  onClose,
+  onSaved,
+}: {
+  patientId: string;
+  editing: EditableRecord;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [saving, setSaving] = useState(false);
+
+  async function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    const values = new FormData(event.currentTarget);
+    let error: { message: string } | null = null;
+
+    if (editing.kind === "pregnancy") {
+      const result = await supabase
+        .from("pregnancies")
+        .update({
+          lmp_date: stringOrNull(values.get("lmp_date")),
+          edd: stringOrNull(values.get("edd")),
+          gravida: numberOrNull(values.get("gravida")),
+          parity: numberOrNull(values.get("parity")),
+          risk_level: String(values.get("risk_level") || "low"),
+          risk_factors: stringOrNull(values.get("risk_factors")),
+        })
+        .eq("id", editing.record.id)
+        .eq("patient_id", patientId);
+      error = result.error;
+    } else if (editing.kind === "encounter") {
+      const result = await supabase
+        .from("encounters")
+        .update({
+          visit_date: new Date(String(values.get("visit_date"))).toISOString(),
+          visit_type: String(values.get("visit_type") || "general"),
+          location: String(values.get("location") || "clinic"),
+          complaints: stringOrNull(values.get("complaints")),
+          assessment: stringOrNull(values.get("assessment")),
+          plan: stringOrNull(values.get("plan")),
+        })
+        .eq("id", editing.record.id)
+        .eq("patient_id", patientId);
+      error = result.error;
+    } else if (editing.kind === "investigation") {
+      const result = await supabase
+        .from("investigations")
+        .update({
+          name: String(values.get("name") || "Investigation"),
+          status: String(values.get("status") || "recommended"),
+          due_date: stringOrNull(values.get("due_date")),
+          notes: stringOrNull(values.get("notes")),
+        })
+        .eq("id", editing.record.id)
+        .eq("patient_id", patientId);
+      error = result.error;
+    } else if (editing.kind === "appointment") {
+      const result = await supabase
+        .from("appointments")
+        .update({
+          scheduled_at: new Date(String(values.get("scheduled_at"))).toISOString(),
+          appointment_type: String(values.get("appointment_type") || "follow_up"),
+          location: String(values.get("location") || "clinic"),
+          reason: stringOrNull(values.get("reason")),
+          notes: stringOrNull(values.get("notes")),
+        })
+        .eq("id", editing.record.id)
+        .eq("patient_id", patientId);
+      error = result.error;
+    } else if (editing.kind === "prescription") {
+      const result = await supabase
+        .from("prescriptions")
+        .update({
+          medication: String(values.get("medication") || "").trim(),
+          dose: stringOrNull(values.get("dose")),
+          frequency: stringOrNull(values.get("frequency")),
+          route: stringOrNull(values.get("route")),
+          duration: stringOrNull(values.get("duration")),
+          instructions: stringOrNull(values.get("instructions")),
+          status: String(values.get("status") || "active"),
+        })
+        .eq("id", editing.record.id)
+        .eq("patient_id", patientId);
+      error = result.error;
+    } else {
+      const result = await supabase
+        .from("referrals")
+        .update({
+          destination: String(values.get("destination") || "").trim(),
+          reason: String(values.get("reason") || "").trim(),
+          urgency: String(values.get("urgency") || "routine"),
+          status: String(values.get("status") || "pending"),
+          notes: stringOrNull(values.get("notes")),
+        })
+        .eq("id", editing.record.id)
+        .eq("patient_id", patientId);
+      error = result.error;
+    }
+
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`${actionLabel(editing.kind)} updated`);
+    await onSaved();
+  }
+
+  const title = `Edit ${actionLabel(editing.kind).toLowerCase()}`;
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4">
+      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-background p-5 shadow-2xl sm:rounded-3xl md:p-6">
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+              Patient record
+            </p>
+            <h2 className="mt-1 text-xl font-bold capitalize">{title}</h2>
+          </div>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+        <form className="space-y-4" onSubmit={save}>
+          {editing.kind === "pregnancy" && <EditPregnancyFields record={editing.record} />}
+          {editing.kind === "encounter" && <EditEncounterFields record={editing.record} />}
+          {editing.kind === "investigation" && <EditInvestigationFields record={editing.record} />}
+          {editing.kind === "appointment" && <EditAppointmentFields record={editing.record} />}
+          {editing.kind === "prescription" && <EditPrescriptionFields record={editing.record} />}
+          {editing.kind === "referral" && <EditReferralFields record={editing.record} />}
+          <div className="flex justify-end gap-2 border-t border-border/70 pt-4">
+            <Button type="button" variant="outline" className="rounded-xl" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving} className="rounded-xl">
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditPregnancyFields({ record }: { record: Pregnancy }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Field label="LMP date" name="lmp_date" type="date" defaultValue={record.lmp_date || ""} />
+      <Field label="Expected due date" name="edd" type="date" defaultValue={record.edd || ""} />
+      <Field label="Gravida" name="gravida" type="number" defaultValue={record.gravida ?? ""} />
+      <Field label="Parity" name="parity" type="number" defaultValue={record.parity ?? ""} />
+      <SelectField
+        label="Risk level"
+        name="risk_level"
+        options={["low", "moderate", "high"]}
+        defaultValue={record.risk_level}
+      />
+      <Field label="Risk factors" name="risk_factors" defaultValue={record.risk_factors || ""} />
+    </div>
+  );
+}
+
+function EditEncounterFields({ record }: { record: Encounter }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Field
+        label="Visit date and time"
+        name="visit_date"
+        type="datetime-local"
+        defaultValue={toDateTimeInput(record.visit_date)}
+      />
+      <SelectField
+        label="Visit type"
+        name="visit_type"
+        options={["antenatal", "general", "postnatal", "follow_up"]}
+        defaultValue={record.visit_type}
+      />
+      <SelectField
+        label="Location"
+        name="location"
+        options={["clinic", "home"]}
+        defaultValue={record.location}
+      />
+      <Field label="Main complaint" name="complaints" defaultValue={record.complaints || ""} />
+      <TextField
+        label="Assessment"
+        name="assessment"
+        placeholder="Clinical assessment"
+        defaultValue={record.assessment || ""}
+      />
+      <TextField
+        label="Plan"
+        name="plan"
+        placeholder="Treatment, advice, and follow-up"
+        defaultValue={record.plan || ""}
+      />
+    </div>
+  );
+}
+
+function EditInvestigationFields({ record }: { record: Investigation }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Field label="Investigation name" name="name" required defaultValue={record.name} />
+      <SelectField
+        label="Status"
+        name="status"
+        options={["recommended", "ordered", "completed", "declined"]}
+        defaultValue={record.status}
+      />
+      <Field label="Due date" name="due_date" type="date" defaultValue={record.due_date || ""} />
+      <Field label="Notes" name="notes" defaultValue={record.notes || ""} />
+    </div>
+  );
+}
+
+function EditAppointmentFields({ record }: { record: Appointment }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Field
+        label="Date and time"
+        name="scheduled_at"
+        type="datetime-local"
+        required
+        defaultValue={toDateTimeInput(record.scheduled_at)}
+      />
+      <SelectField
+        label="Appointment type"
+        name="appointment_type"
+        options={["antenatal", "postnatal", "follow_up", "general"]}
+        defaultValue={record.appointment_type}
+      />
+      <SelectField
+        label="Location"
+        name="location"
+        options={["clinic", "home"]}
+        defaultValue={record.location}
+      />
+      <Field label="Reason" name="reason" defaultValue={record.reason || ""} />
+      <TextField
+        label="Notes"
+        name="notes"
+        placeholder="Optional appointment notes"
+        defaultValue={record.notes || ""}
+      />
+    </div>
+  );
+}
+
+function EditPrescriptionFields({ record }: { record: Prescription }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Field label="Medicine" name="medication" required defaultValue={record.medication} />
+      <Field label="Dose" name="dose" defaultValue={record.dose || ""} />
+      <Field label="Frequency" name="frequency" defaultValue={record.frequency || ""} />
+      <Field label="Route" name="route" defaultValue={record.route || ""} />
+      <Field label="Duration" name="duration" defaultValue={record.duration || ""} />
+      <SelectField
+        label="Status"
+        name="status"
+        options={["active", "completed", "stopped"]}
+        defaultValue={record.status}
+      />
+      <TextField
+        label="Instructions"
+        name="instructions"
+        placeholder="Directions and counselling notes"
+        defaultValue={record.instructions || ""}
+      />
+    </div>
+  );
+}
+
+function EditReferralFields({ record }: { record: Referral }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Field label="Destination" name="destination" required defaultValue={record.destination} />
+      <SelectField
+        label="Urgency"
+        name="urgency"
+        options={["routine", "urgent", "emergency"]}
+        defaultValue={record.urgency}
+      />
+      <TextField
+        label="Reason"
+        name="reason"
+        placeholder="Reason for referral"
+        required
+        defaultValue={record.reason}
+      />
+      <SelectField
+        label="Status"
+        name="status"
+        options={["pending", "accepted", "completed", "cancelled"]}
+        defaultValue={record.status}
+      />
+      <TextField
+        label="Notes"
+        name="notes"
+        placeholder="Handover and follow-up notes"
+        defaultValue={record.notes || ""}
+      />
+    </div>
+  );
+}
+
+function toDateTimeInput(value: string) {
+  return new Date(value).toISOString().slice(0, 16);
+}
 
 function CareActions({ patientId, pregnancyId }: { patientId: string; pregnancyId?: string }) {
   const [active, setActive] = useState<CareAction | null>(null);
@@ -812,6 +1294,7 @@ function Field({
   type = "text",
   placeholder,
   required,
+  defaultValue,
 }: {
   label: string;
   name: string;
@@ -819,6 +1302,7 @@ function Field({
   type?: string;
   placeholder?: string;
   required?: boolean;
+  defaultValue?: string | number;
 }) {
   return (
     <div className="space-y-2">
@@ -829,6 +1313,7 @@ function Field({
         type={type}
         placeholder={placeholder}
         required={required}
+        defaultValue={defaultValue}
         className="h-11 rounded-xl bg-background/80"
       />
     </div>
@@ -840,11 +1325,13 @@ function TextField({
   name,
   placeholder,
   required,
+  defaultValue,
 }: {
   label: string;
   name: string;
   placeholder: string;
   required?: boolean;
+  defaultValue?: string;
 }) {
   return (
     <div className="space-y-2 sm:col-span-2">
@@ -855,20 +1342,31 @@ function TextField({
         rows={3}
         placeholder={placeholder}
         required={required}
+        defaultValue={defaultValue}
         className="rounded-xl bg-background/80"
       />
     </div>
   );
 }
 
-function SelectField({ label, name, options }: { label: string; name: string; options: string[] }) {
+function SelectField({
+  label,
+  name,
+  options,
+  defaultValue,
+}: {
+  label: string;
+  name: string;
+  options: string[];
+  defaultValue?: string;
+}) {
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>{label}</Label>
       <select
         id={name}
         name={name}
-        defaultValue={options[0]}
+        defaultValue={defaultValue ?? options[0]}
         className="h-11 w-full rounded-xl border border-input bg-background/80 px-3 text-sm capitalize focus:outline-none focus:ring-2 focus:ring-ring"
       >
         {options.map((option) => (
