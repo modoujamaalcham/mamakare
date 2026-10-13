@@ -111,6 +111,17 @@ function PatientDetail() {
   }
 
   function patientReport(): ReportInput {
+    const reportValue = (value: unknown) => {
+      if (Array.isArray(value)) return value.length ? value.join(", ") : "None recorded";
+      if (typeof value === "boolean") return value ? "Yes" : "No";
+      if (value === null || value === undefined || value === "") return "Not recorded";
+      return String(value);
+    };
+    const reportDate = (value: string | null | undefined, withTime = false) =>
+      value ? (withTime ? formatDateTime(value) : formatDate(value)) : "Not recorded";
+    const rows = (entries: Array<[string, unknown]>): Array<[string, string]> =>
+      entries.map(([label, value]) => [label, reportValue(value)]);
+
     return {
       title: "Patient care report",
       subtitle: `${reportTitle} · ${patient.patient_number}`,
@@ -118,48 +129,150 @@ function PatientDetail() {
       sections: [
         {
           title: "Patient details",
-          rows: [
+          rows: rows([
             ["Name", reportTitle],
             ["Patient ID", patient.patient_number],
-            [
-              "Date of birth",
-              patient.date_of_birth ? formatDate(patient.date_of_birth) : "Not recorded",
-            ],
-            ["Phone", patient.phone || "Not recorded"],
-            [
-              "Location",
-              [patient.village_town, patient.region].filter(Boolean).join(", ") || "Not recorded",
-            ],
-            ["Allergies", patient.allergies || "None recorded"],
-          ],
+            ["Status", patient.status],
+            ["Date of birth", reportDate(patient.date_of_birth)],
+            ["Phone", patient.phone],
+            ["Address", patient.address],
+            ["Village / town", patient.village_town],
+            ["Region", patient.region],
+            ["Blood group", patient.blood_group],
+            ["Allergies", patient.allergies],
+            ["Medical history", patient.medical_history],
+            ["Notes", patient.notes],
+            ["Next of kin", patient.next_of_kin_name],
+            ["Next of kin phone", patient.next_of_kin_phone],
+            ["Registered", reportDate(patient.created_at, true)],
+            ["Last updated", reportDate(patient.updated_at, true)],
+          ]),
         },
         {
           title: "Care summary",
-          rows: [
+          rows: rows([
             ["Encounters", String(encounters.length)],
             ["Pregnancies", String(pregnancies.length)],
             ["Investigations", String(investigations.length)],
             ["Appointments", String(appointments.length)],
             ["Prescriptions", String(prescriptions.length)],
             ["Referrals", String(referrals.length)],
-          ],
+          ]),
         },
         {
-          title: "Prescriptions",
+          title: "Pregnancy history",
+          rows: pregnancies.length
+            ? pregnancies.flatMap((item, index) =>
+                rows([
+                  [`Pregnancy ${index + 1} · status`, item.status],
+                  [`Pregnancy ${index + 1} · LMP date`, reportDate(item.lmp_date)],
+                  [`Pregnancy ${index + 1} · expected due date`, reportDate(item.edd)],
+                  [`Pregnancy ${index + 1} · gravida`, item.gravida],
+                  [`Pregnancy ${index + 1} · parity`, item.parity],
+                  [`Pregnancy ${index + 1} · risk level`, item.risk_level],
+                  [`Pregnancy ${index + 1} · risk factors`, item.risk_factors],
+                  [`Pregnancy ${index + 1} · outcome date`, reportDate(item.outcome_date)],
+                  [`Pregnancy ${index + 1} · outcome notes`, item.outcome_notes],
+                ]),
+              )
+            : [["Status", "No pregnancy records recorded"]],
+        },
+        {
+          title: "Clinical encounters and vitals",
+          rows: encounters.length
+            ? encounters.flatMap((item, index) =>
+                rows([
+                  [`Encounter ${index + 1} · date`, reportDate(item.visit_date, true)],
+                  [`Encounter ${index + 1} · visit type`, item.visit_type],
+                  [`Encounter ${index + 1} · location`, item.location],
+                  [`Encounter ${index + 1} · complaints`, item.complaints],
+                  [`Encounter ${index + 1} · symptoms`, item.symptoms],
+                  [`Encounter ${index + 1} · assessment`, item.assessment],
+                  [`Encounter ${index + 1} · plan / treatment`, item.plan],
+                  [`Encounter ${index + 1} · danger flags`, item.danger_flags],
+                  [
+                    `Encounter ${index + 1} · blood pressure`,
+                    item.systolic !== null || item.diastolic !== null
+                      ? `${reportValue(item.systolic)} / ${reportValue(item.diastolic)} mmHg`
+                      : null,
+                  ],
+                  [`Encounter ${index + 1} · pulse (bpm)`, item.pulse],
+                  [`Encounter ${index + 1} · temperature (°C)`, item.temperature],
+                  [`Encounter ${index + 1} · weight (kg)`, item.weight_kg],
+                  [`Encounter ${index + 1} · respiratory rate`, item.resp_rate],
+                  [`Encounter ${index + 1} · oxygen saturation (%)`, item.spo2],
+                  [`Encounter ${index + 1} · hemoglobin (g/dL)`, item.hemoglobin],
+                  [`Encounter ${index + 1} · fundal height (cm)`, item.fundal_height_cm],
+                  [`Encounter ${index + 1} · fetal heart rate (bpm)`, item.fetal_heart_rate],
+                  [`Encounter ${index + 1} · edema`, item.edema],
+                  [`Encounter ${index + 1} · fetal movement`, item.fetal_movement],
+                  [`Encounter ${index + 1} · presentation`, item.presentation],
+                  [`Encounter ${index + 1} · urine protein`, item.urine_protein],
+                ]),
+              )
+            : [["Status", "No clinical encounters recorded"]],
+        },
+        {
+          title: "Investigations and results",
+          rows: investigations.length
+            ? investigations.flatMap((item, index) =>
+                rows([
+                  [`Investigation ${index + 1} · name`, item.name],
+                  [`Investigation ${index + 1} · status`, item.status],
+                  [`Investigation ${index + 1} · abnormal`, item.abnormal],
+                  [`Investigation ${index + 1} · result`, item.result],
+                  [`Investigation ${index + 1} · result date`, reportDate(item.result_date)],
+                  [`Investigation ${index + 1} · due date`, reportDate(item.due_date)],
+                  [`Investigation ${index + 1} · notes`, item.notes],
+                ]),
+              )
+            : [["Status", "No investigations recorded"]],
+        },
+        {
+          title: "Appointments",
+          rows: appointments.length
+            ? appointments.flatMap((item, index) =>
+                rows([
+                  [`Appointment ${index + 1} · scheduled`, reportDate(item.scheduled_at, true)],
+                  [`Appointment ${index + 1} · type`, item.appointment_type],
+                  [`Appointment ${index + 1} · status`, item.status],
+                  [`Appointment ${index + 1} · location`, item.location],
+                  [`Appointment ${index + 1} · reason`, item.reason],
+                  [`Appointment ${index + 1} · notes`, item.notes],
+                ]),
+              )
+            : [["Status", "No appointments recorded"]],
+        },
+        {
+          title: "Prescriptions and medicines",
           rows: prescriptions.length
-            ? prescriptions.map((item) => [
-                item.medication,
-                [item.dose, item.frequency, item.duration, item.status].filter(Boolean).join(" · "),
-              ])
+            ? prescriptions.flatMap((item, index) =>
+                rows([
+                  [`Prescription ${index + 1} · medication`, item.medication],
+                  [`Prescription ${index + 1} · dose`, item.dose],
+                  [`Prescription ${index + 1} · frequency`, item.frequency],
+                  [`Prescription ${index + 1} · route`, item.route],
+                  [`Prescription ${index + 1} · duration`, item.duration],
+                  [`Prescription ${index + 1} · instructions`, item.instructions],
+                  [`Prescription ${index + 1} · status`, item.status],
+                  [`Prescription ${index + 1} · prescribed`, reportDate(item.prescribed_at, true)],
+                ]),
+              )
             : [["Status", "No prescriptions recorded"]],
         },
         {
-          title: "Referrals",
+          title: "Referrals and follow-up",
           rows: referrals.length
-            ? referrals.map((item) => [
-                item.destination,
-                `${item.urgency} · ${item.status} · ${item.reason}`,
-              ])
+            ? referrals.flatMap((item, index) =>
+                rows([
+                  [`Referral ${index + 1} · destination`, item.destination],
+                  [`Referral ${index + 1} · reason`, item.reason],
+                  [`Referral ${index + 1} · urgency`, item.urgency],
+                  [`Referral ${index + 1} · status`, item.status],
+                  [`Referral ${index + 1} · notes`, item.notes],
+                  [`Referral ${index + 1} · referred`, reportDate(item.referred_at, true)],
+                ]),
+              )
             : [["Status", "No referrals recorded"]],
         },
       ],
