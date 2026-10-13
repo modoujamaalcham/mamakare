@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/more")({
-  head: () => ({ meta: [{ title: "More — Mamakare" }] }),
+  head: () => ({ meta: [{ title: "Settings — Mamakare" }] }),
   component: More,
 });
 
@@ -190,12 +190,12 @@ function More() {
 
       {me?.roles.includes("admin") && (
         <div className="space-y-5">
-          <Section title="Administration" action={<ShieldCheck className="h-4 w-4 text-primary" />}>
+          <Section title="Staff & access" action={<ShieldCheck className="h-4 w-4 text-primary" />}>
             <p className="text-sm leading-6 text-muted-foreground">
               Manage staff access and the shared company profile used in patient reports.
             </p>
             <Button asChild variant="outline" className="mt-4 rounded-xl">
-              <Link to="/staff">Open staff administration</Link>
+              <Link to="/staff">Manage staff access</Link>
             </Button>
           </Section>
 
