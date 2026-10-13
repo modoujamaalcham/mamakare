@@ -33,9 +33,11 @@ export function ReportPreview({ report, onClose }: { report: ReportInput; onClos
           body.printing-report .report-paper { max-width: none !important; border: 0 !important; box-shadow: none !important; }
         }
       `}</style>
-      <div className="report-paper mx-auto min-h-full max-w-3xl rounded-2xl bg-white p-4 text-slate-900 shadow-2xl sm:p-8">
-        <div className="report-print-toolbar mb-4 flex items-center justify-between gap-3 border-b border-slate-200 pb-4">
-          <p className="text-sm font-semibold text-slate-600">Report preview</p>
+      <div className="report-paper mx-auto min-h-full max-w-4xl rounded-2xl bg-white p-4 text-slate-900 shadow-2xl sm:p-10">
+        <div className="report-print-toolbar mb-6 flex items-center justify-between gap-3 border-b border-slate-200 pb-4">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+            Clinical report
+          </p>
           <div className="flex items-center gap-2">
             <Button type="button" onClick={print} className="rounded-xl">
               <Download className="h-4 w-4" /> Save as PDF
@@ -52,28 +54,32 @@ export function ReportPreview({ report, onClose }: { report: ReportInput; onClos
           </div>
         </div>
 
-        <header className="flex items-start gap-3 border-b-[3px] border-teal-700 pb-5">
-          <img src={logoUrl} alt={companyName} className="h-14 w-14 rounded-xl" />
+        <header className="flex items-start gap-4 border-b-[3px] border-teal-700 pb-6">
+          <img src={logoUrl} alt={companyName} className="h-16 w-16 rounded-2xl object-cover" />
           <div className="min-w-0">
             <p className="text-base font-bold text-slate-800">{companyName}</p>
             {contact && <p className="mt-1 text-xs text-slate-500">{contact}</p>}
-            <h1 className="mt-3 text-2xl font-bold text-teal-700">{report.title}</h1>
+            <h1 className="mt-4 text-2xl font-bold tracking-tight text-teal-700 sm:text-3xl">
+              {report.title}
+            </h1>
             <p className="mt-1 text-sm text-slate-500">{report.subtitle}</p>
           </div>
         </header>
 
-        <div className="space-y-5">
+        <div className="space-y-4">
           {report.sections.map((section) => (
             <section
               key={section.title}
-              className="mt-6 rounded-xl border border-slate-200 p-4 sm:p-5"
+              className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/40 p-4 sm:p-6"
             >
-              <h2 className="mb-3 text-base font-bold text-teal-700">{section.title}</h2>
-              <dl className="space-y-2">
+              <h2 className="mb-4 text-base font-bold tracking-tight text-teal-700">
+                {section.title}
+              </h2>
+              <dl className="space-y-0">
                 {section.rows.map(([label, value], index) => (
                   <div
                     key={`${label}-${index}`}
-                    className="grid gap-1 border-b border-slate-100 pb-2 sm:grid-cols-[180px_1fr] sm:gap-4"
+                    className="grid gap-1 border-b border-slate-200/80 py-2.5 first:pt-0 last:border-0 last:pb-0 sm:grid-cols-[190px_1fr] sm:gap-6"
                   >
                     <dt className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
                       {label}
