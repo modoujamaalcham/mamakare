@@ -18,18 +18,18 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between", className)}>
+    <div className={cn("mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between", className)}>
       <div className="flex items-start gap-3 min-w-0">
         {backAction}
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl leading-tight">
               {title}
             </h1>
             {badge}
           </div>
           {subtitle && (
-            <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+            <p className="mt-1 text-sm text-muted-foreground leading-relaxed max-w-prose">
               {subtitle}
             </p>
           )}
@@ -74,13 +74,13 @@ export function Pill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold tracking-wide transition-colors",
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-bold tracking-wide transition-colors",
         pillVariants[tone],
         className,
       )}
     >
       {withDot && (
-        <span className={cn("h-1.5 w-1.5 rounded-full", dotVariants[tone])} />
+        <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", dotVariants[tone])} />
       )}
       {children}
     </span>
@@ -107,20 +107,20 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={cn("card-surface p-4 sm:p-6 transition-all", className)}>
+    <section className={cn("card-surface p-4 sm:p-5 transition-all", className)}>
       <div className="mb-4 flex items-center justify-between gap-3 border-b border-border/50 pb-3">
         <div className="flex items-center gap-2.5 min-w-0">
           {Icon && (
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary shadow-xs">
               <Icon className="h-4 w-4" />
             </div>
           )}
           <div className="min-w-0">
-            <h2 className="text-base font-semibold tracking-tight text-foreground truncate">
+            <h2 className="text-sm font-bold tracking-tight text-foreground truncate">
               {title}
             </h2>
             {subtitle && (
-              <p className="text-xs text-muted-foreground">{subtitle}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
             )}
           </div>
         </div>
