@@ -216,15 +216,15 @@ export function GestationalTracker({
   return (
     <div className={cn("card-surface p-4 sm:p-5 bg-gradient-to-br from-card to-primary-soft/20", className)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="grid h-8 w-8 place-items-center rounded-xl bg-primary-soft text-primary">
+        <div className="flex items-center gap-2.5">
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary-soft text-primary shadow-xs">
             <Baby className="h-4 w-4" />
           </div>
           <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               Current Gestation
             </span>
-            <div className="text-lg sm:text-xl font-bold text-foreground">
+            <div className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight leading-tight">
               {weeks}w {days}d
             </div>
           </div>
@@ -238,7 +238,7 @@ export function GestationalTracker({
       </div>
 
       <div className="mt-4 space-y-1.5">
-        <div className="flex justify-between text-xs font-medium text-muted-foreground">
+        <div className="flex justify-between text-[10px] font-semibold text-muted-foreground">
           <span>Week 1</span>
           <span>Week 13 (T2)</span>
           <span>Week 28 (T3)</span>
@@ -254,11 +254,11 @@ export function GestationalTracker({
 
       {edd && (
         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground border-t border-border/50 pt-2.5">
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5 font-medium">
             <Calendar className="h-3.5 w-3.5 text-primary" />
-            Estimated due date: <strong className="text-foreground">{edd}</strong>
+            EDD: <strong className="text-foreground ml-0.5">{edd}</strong>
           </span>
-          <span className="font-medium text-primary">
+          <span className="font-bold text-primary">
             {weeks >= 36 ? "Near term" : `${40 - weeks} weeks remaining`}
           </span>
         </div>
@@ -295,12 +295,22 @@ export function Empty({
 
 export function Loading({ count = 3 }: { count?: number }) {
   return (
-    <div className="space-y-3">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="h-20 animate-pulse rounded-2xl border border-border/40 bg-muted/40 p-4"
-        />
+          className="card-surface animate-pulse rounded-2xl p-5 space-y-3"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-2xl bg-muted" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3.5 w-3/4 rounded-full bg-muted" />
+              <div className="h-2.5 w-1/2 rounded-full bg-muted" />
+            </div>
+          </div>
+          <div className="h-2 w-full rounded-full bg-muted" />
+          <div className="h-2 w-5/6 rounded-full bg-muted" />
+        </div>
       ))}
     </div>
   );
