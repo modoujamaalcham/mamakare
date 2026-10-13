@@ -10,13 +10,16 @@ type BeforeInstallPromptEvent = Event & {
 const INSTALL_DISMISSED_KEY = "mamakare-install-dismissed";
 
 export function PwaProvider() {
-  const [online, setOnline] = useState(true);
+  const [online, setOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine,
+  );
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [update, setUpdate] = useState<ServiceWorkerRegistration | null>(null);
   const [dismissedInstall, setDismissedInstall] = useState(false);
 
   useEffect(() => {
     let checking = false;
+    let failedChecks = 0;
 
     async function checkConnectivity() {
       if (checking || typeof navigator === "undefined") return;
@@ -26,25 +29,33 @@ export function PwaProvider() {
       const controller = new AbortController();
       const timeout = window.setTimeout(() => controller.abort(), 5000);
       try {
-        const response = await fetch(
-          url && key ? `${url.replace(/\/$/, "")}/auth/v1/health` : "/favicon.ico",
-          {
-            method: "GET",
-            cache: "no-store",
-            signal: controller.signal,
-            headers: key ? { apikey: key } : {},
-          },
-        );
-        setOnline(response.ok);
+        await fetch(url && key ? `${url.replace(/\/$/, "")}/auth/v1/health` : "/favicon.ico", {
+          method: "GET",
+          cache: "no-store",
+          signal: controller.signal,
+          headers: key ? { apikey: key } : {},
+        });
+        // A reachable endpoint proves connectivity even when the endpoint
+        // returns an auth, rate-limit, or server error. `response.ok` is not
+        // an internet check and caused false offline banners in some browsers.
+        failedChecks = 0;
+        setOnline(true);
       } catch {
-        setOnline(false);
+        failedChecks += 1;
+        // Avoid showing a false warning for a single transient request or
+        // when the browser reports that the device is still online.
+        if (!navigator.onLine || failedChecks >= 2) setOnline(false);
       } finally {
         window.clearTimeout(timeout);
         checking = false;
       }
     }
 
-    const handleOnline = () => void checkConnectivity();
+    const handleOnline = () => {
+      failedChecks = 0;
+      setOnline(true);
+      void checkConnectivity();
+    };
     const handleOffline = () => setOnline(false);
     const handleInstall = (event: Event) => {
       if (window.localStorage.getItem(INSTALL_DISMISSED_KEY) === "1") return;
