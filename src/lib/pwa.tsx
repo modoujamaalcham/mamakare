@@ -21,8 +21,8 @@ export function PwaProvider() {
     async function checkConnectivity() {
       if (checking || typeof navigator === "undefined") return;
       checking = true;
-      const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-      const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+      const url = import.meta.env["VITE_SUPABASE_URL"] as string | undefined;
+      const key = import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] as string | undefined;
       const controller = new AbortController();
       const timeout = window.setTimeout(() => controller.abort(), 5000);
       try {
@@ -32,7 +32,7 @@ export function PwaProvider() {
             method: "GET",
             cache: "no-store",
             signal: controller.signal,
-            headers: key ? { apikey: key } : undefined,
+            headers: key ? { apikey: key } : {},
           },
         );
         setOnline(response.ok);

@@ -49,7 +49,10 @@ function NewPatient() {
 
   async function onSubmit(data: z.output<typeof schema>) {
     const { data: row, error } = await supabase.from("patients").insert(data).select("id").single();
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Patient registered");
     qc.invalidateQueries({ queryKey: ["patients"] });
     navigate({ to: "/patients/$id", params: { id: row.id } });

@@ -93,7 +93,7 @@ function PatientDetail() {
     return {
       title: "Prescription report",
       subtitle: `${reportTitle} · ${patient.patient_number}`,
-      company,
+      company: company ?? null,
       sections: [
         {
           title: "Medication items",
@@ -114,7 +114,7 @@ function PatientDetail() {
     return {
       title: "Patient care report",
       subtitle: `${reportTitle} · ${patient.patient_number}`,
-      company,
+      company: company ?? null,
       sections: [
         {
           title: "Patient details",
@@ -693,6 +693,7 @@ function EditRecordDialog({
         .eq("patient_id", patientId);
       error = result.error;
     } else if (editing.kind === "encounter") {
+      const vitals = readVitals(values);
       const result = await supabase
         .from("encounters")
         .update({
@@ -702,6 +703,7 @@ function EditRecordDialog({
           complaints: stringOrNull(values.get("complaints")),
           assessment: stringOrNull(values.get("assessment")),
           plan: stringOrNull(values.get("plan")),
+          ...vitals,
         })
         .eq("id", editing.record.id)
         .eq("patient_id", patientId);
@@ -858,6 +860,7 @@ function EditEncounterFields({ record }: { record: Encounter }) {
         placeholder="Treatment, advice, and follow-up"
         defaultValue={record.plan || ""}
       />
+      <VitalsFields record={record} />
     </div>
   );
 }
@@ -972,7 +975,13 @@ function toDateTimeInput(value: string) {
   return new Date(value).toISOString().slice(0, 16);
 }
 
-function CareActions({ patientId, pregnancyId }: { patientId: string; pregnancyId?: string }) {
+function CareActions({
+  patientId,
+  pregnancyId,
+}: {
+  patientId: string;
+  pregnancyId: string | undefined;
+}) {
   const [active, setActive] = useState<CareAction | null>(null);
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
@@ -994,6 +1003,7 @@ function CareActions({ patientId, pregnancyId }: { patientId: string; pregnancyI
       });
       error = result.error;
     } else if (action === "encounter") {
+      const vitals = readVitals(values);
       const result = await supabase.from("encounters").insert({
         patient_id: patientId,
         pregnancy_id: pregnancyId ?? null,
@@ -1005,6 +1015,7 @@ function CareActions({ patientId, pregnancyId }: { patientId: string; pregnancyI
         complaints: stringOrNull(values.get("complaints")),
         assessment: stringOrNull(values.get("assessment")),
         plan: stringOrNull(values.get("plan")),
+        ...vitals,
       });
       error = result.error;
     } else if (action === "investigation") {
@@ -1173,6 +1184,81 @@ function EncounterFields() {
       <Field label="Main complaint" name="complaints" placeholder="What brought the patient in?" />
       <TextField label="Assessment" name="assessment" placeholder="Clinical assessment" />
       <TextField label="Plan" name="plan" placeholder="Treatment, advice, and follow-up" />
+      <VitalsFields />
+    </div>
+  );
+}
+
+function VitalsFields({ record }: { record?: Encounter }) {
+  return (
+    <div className="sm:col-span-2 rounded-2xl border border-border/70 bg-primary-soft/30 p-4">
+      <div className="mb-3">
+        <p className="text-sm font-semibold">Vitals</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Record the measurements taken during this encounter. All fields are optional.
+        </p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Field
+          label="Systolic BP (mmHg)"
+          name="systolic"
+          type="number"
+          defaultValue={record?.systolic ?? ""}
+        />
+        <Field
+          label="Diastolic BP (mmHg)"
+          name="diastolic"
+          type="number"
+          defaultValue={record?.diastolic ?? ""}
+        />
+        <Field label="Pulse (bpm)" name="pulse" type="number" defaultValue={record?.pulse ?? ""} />
+        <Field
+          label="Temperature (°C)"
+          name="temperature"
+          type="number"
+          step="0.1"
+          defaultValue={record?.temperature ?? ""}
+        />
+        <Field
+          label="Weight (kg)"
+          name="weight_kg"
+          type="number"
+          step="0.1"
+          defaultValue={record?.weight_kg ?? ""}
+        />
+        <Field
+          label="Respiratory rate"
+          name="resp_rate"
+          type="number"
+          defaultValue={record?.resp_rate ?? ""}
+        />
+        <Field
+          label="Oxygen saturation (%)"
+          name="spo2"
+          type="number"
+          defaultValue={record?.spo2 ?? ""}
+        />
+        <Field
+          label="Hemoglobin (g/dL)"
+          name="hemoglobin"
+          type="number"
+          step="0.1"
+          defaultValue={record?.hemoglobin ?? ""}
+        />
+        <Field
+          label="Fundal height (cm)"
+          name="fundal_height_cm"
+          type="number"
+          step="0.1"
+          defaultValue={record?.fundal_height_cm ?? ""}
+        />
+        <Field
+          label="Fetal heart rate (bpm)"
+          name="fetal_heart_rate"
+          type="number"
+          defaultValue={record?.fetal_heart_rate ?? ""}
+        />
+      </div>
     </div>
   );
 }
@@ -1295,6 +1381,7 @@ function Field({
   placeholder,
   required,
   defaultValue,
+  step,
 }: {
   label: string;
   name: string;
@@ -1303,6 +1390,7 @@ function Field({
   placeholder?: string;
   required?: boolean;
   defaultValue?: string | number;
+  step?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -1314,6 +1402,7 @@ function Field({
         placeholder={placeholder}
         required={required}
         defaultValue={defaultValue}
+        step={step}
         className="h-11 rounded-xl bg-background/80"
       />
     </div>
@@ -1379,12 +1468,27 @@ function SelectField({
   );
 }
 
-function stringOrNull(value: FormDataEntryValue | null) {
+function stringOrNull(value: FormDataEntryValue | null | undefined) {
   const stringValue = String(value || "").trim();
   return stringValue || null;
 }
 
-function numberOrNull(value: FormDataEntryValue | null) {
+function readVitals(values: FormData) {
+  return {
+    systolic: numberOrNull(values.get("systolic")),
+    diastolic: numberOrNull(values.get("diastolic")),
+    pulse: numberOrNull(values.get("pulse")),
+    temperature: numberOrNull(values.get("temperature")),
+    weight_kg: numberOrNull(values.get("weight_kg")),
+    resp_rate: numberOrNull(values.get("resp_rate")),
+    spo2: numberOrNull(values.get("spo2")),
+    hemoglobin: numberOrNull(values.get("hemoglobin")),
+    fundal_height_cm: numberOrNull(values.get("fundal_height_cm")),
+    fetal_heart_rate: numberOrNull(values.get("fetal_heart_rate")),
+  };
+}
+
+function numberOrNull(value: FormDataEntryValue | null | undefined) {
   const stringValue = String(value || "").trim();
   return stringValue ? Number(stringValue) : null;
 }
