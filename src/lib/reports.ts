@@ -53,7 +53,7 @@ export function printReport(report: ReportInput) {
     .map((value) => value?.trim())
     .filter(Boolean)
     .join(" · ");
-  const logoUrl = company?.logo_url?.trim() || `${window.location.origin}/icons/mamakare.svg`;
+  const logoUrl = `${window.location.origin}/branding/mamakare.jpg`;
 
   printWindow.onload = () => {
     printWindow.setTimeout(() => printWindow.print(), 300);
@@ -120,6 +120,7 @@ function wrapText(value: string, limit = 58) {
 async function reportImage(report: ReportInput) {
   const company = report.company;
   const companyName = company?.name?.trim() || "Mamakare";
+  const logoUrl = `${window.location.origin}/branding/mamakare.jpg`;
   const contact = [company?.address, company?.phone, company?.email]
     .map((value) => value?.trim())
     .filter(Boolean)
@@ -156,8 +157,8 @@ async function reportImage(report: ReportInput) {
   height += 70;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
     <rect width="100%" height="100%" fill="#ffffff" />
-    <rect x="${padding}" y="${padding}" width="72" height="72" rx="18" fill="#087f7b" />
-    <text x="${padding + 36}" y="${padding + 51}" text-anchor="middle" font-family="Arial,sans-serif" font-size="38" font-weight="700" fill="#ffffff">♥</text>
+    <rect x="${padding}" y="${padding}" width="72" height="72" rx="18" fill="#ffffff" />
+    <image href="${xmlEscape(logoUrl)}" x="${padding}" y="${padding}" width="72" height="72" preserveAspectRatio="xMidYMid slice" />
     <text x="${padding + 96}" y="${padding + 30}" class="company">${xmlEscape(companyName)}</text>
     <text x="${padding + 96}" y="${padding + 56}" class="contact">${xmlEscape(contact)}</text>
     <line x1="${padding}" y1="${padding + 104}" x2="${width - padding}" y2="${padding + 104}" stroke="#087f7b" stroke-width="5" />

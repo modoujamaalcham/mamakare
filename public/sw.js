@@ -1,12 +1,11 @@
-const CACHE_NAME = "mamakare-shell-v3";
+const CACHE_NAME = "mamakare-shell-v4";
 const OFFLINE_URL = "/offline.html";
 const PUBLIC_SHELL_URLS = ["/", "/auth"];
 const PRECACHE_URLS = [
   ...PUBLIC_SHELL_URLS,
   OFFLINE_URL,
   "/manifest.webmanifest",
-  "/icons/mamakare.svg",
-  "/icons/mamakare-maskable.svg",
+  "/branding/mamakare.jpg",
 ];
 
 function cacheResponse(request, response) {

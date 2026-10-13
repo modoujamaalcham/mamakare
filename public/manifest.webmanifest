@@ -10,21 +10,21 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "/icons/mamakare.svg",
+      "src": "/branding/mamakare.jpg",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/icons/mamakare.svg",
+      "src": "/branding/mamakare.jpg",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/icons/mamakare-maskable.svg",
+      "src": "/branding/mamakare.jpg",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/jpeg",
       "purpose": "maskable"
     }
   ]

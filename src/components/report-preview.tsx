@@ -9,7 +9,7 @@ export function ReportPreview({ report, onClose }: { report: ReportInput; onClos
     .map((value) => value?.trim())
     .filter(Boolean)
     .join(" · ");
-  const logoUrl = company?.logo_url?.trim() || "/icons/mamakare.svg";
+  const logoUrl = "/branding/mamakare.jpg";
 
   function print() {
     document.body.classList.add("printing-report");

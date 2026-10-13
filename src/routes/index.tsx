@@ -96,7 +96,7 @@ function Index() {
 export function Logo() {
   return (
     <span className="flex items-center gap-2 font-display text-lg font-extrabold">
-      <img src="/icons/mamakare.svg" alt="" className="h-8 w-8 rounded-lg" />
+      <img src="/branding/mamakare.jpg" alt="" className="h-8 w-8 rounded-lg object-cover" />
       Mamakare
     </span>
   );
